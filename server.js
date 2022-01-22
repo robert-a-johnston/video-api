@@ -1,12 +1,15 @@
 // Requires express and instantiate express application object
-const app = require('express')()
+const express = require('express')
+const app = express()
 // Uses built in http module in node
 // Use create server to create server with express framework
-const server = require('http').createServer(app)
+const http = require('http')
+const server = http.createServer(app)
 // Use cors allows cross origin requests
 const cors = require('cors')
 // Use socket.io
-const io = require('socket.io')(server, {
+const { Server } = require('socket.io')
+const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET','POST']
@@ -28,4 +31,28 @@ app.get('/', (req, res) =>{
   res.send('Running on port 5000')
 })
 
+
+
+// Socket io
+io.on('connection', (socket) =>{
+  // Give id on front end
+  socket.emit('me', socket.id)
+
+  // Disconnect messages
+  socket.on('disconnect', () =>{
+    socket.broadcast.emit('callEnded')
+  })
+
+  socket.on("callUser", ({ userToCall, signalData, from, name }) => {
+		io.to(userToCall).emit("callUser", { signal: signalData, from, name });
+	})
+
+	socket.on("answerCall", (data) => {
+		io.to(data.to).emit("callAccepted", data.signal)
+	})
+
+})
+
+
+// server listening
 server.listen(PORT, () => console.log(`listening on port ${PORT}`))
